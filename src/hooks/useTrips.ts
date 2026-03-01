@@ -4,6 +4,15 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useViewScope } from '@/contexts/ViewScopeContext'
 import type { Trip, TripWithDetails, Flight, Hotel, Restaurant, Transport } from '@/types'
 import { toast } from 'sonner'
+import {
+  isDemoMode,
+  DEMO_TRIPS,
+  DEMO_FLIGHTS,
+  DEMO_HOTELS,
+  DEMO_LOYALTY,
+  DEMO_VISITED_COUNTRIES,
+  DEMO_USER_ID,
+} from '@/lib/demo'
 
 export function useTrips() {
   const { user } = useAuth()
@@ -12,6 +21,10 @@ export function useTrips() {
   return useQuery({
     queryKey: ['trips', user?.id, scope],
     queryFn: async () => {
+      if (isDemoMode()) {
+        return [...DEMO_TRIPS]
+      }
+
       let query = supabase
         .from('trips')
         .select('*')
@@ -36,6 +49,18 @@ export function useTripDetail(tripId: string | undefined) {
     queryKey: ['trip', tripId],
     queryFn: async () => {
       if (!tripId) throw new Error('No trip ID')
+
+      if (isDemoMode()) {
+        const trip = DEMO_TRIPS.find((t) => t.id === tripId)
+        if (!trip) throw new Error('Trip not found')
+        return {
+          ...trip,
+          flights: DEMO_FLIGHTS.filter((f) => f.trip_id === tripId),
+          hotels: DEMO_HOTELS.filter((h) => h.trip_id === tripId),
+          restaurants: [] as Restaurant[],
+          transports: [] as Transport[],
+        } as TripWithDetails
+      }
 
       const [tripRes, flightsRes, hotelsRes, restaurantsRes, transportsRes] =
         await Promise.all([
@@ -66,6 +91,19 @@ export function useCreateTrip() {
 
   return useMutation({
     mutationFn: async (trip: Omit<Trip, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+      if (isDemoMode()) {
+        const now = new Date().toISOString()
+        const newTrip: Trip = {
+          ...trip,
+          id: `demo-trip-${Date.now()}`,
+          user_id: DEMO_USER_ID,
+          created_at: now,
+          updated_at: now,
+        }
+        DEMO_TRIPS.unshift(newTrip)
+        return newTrip
+      }
+
       const { data, error } = await supabase
         .from('trips')
         .insert({ ...trip, user_id: user!.id })
@@ -92,6 +130,13 @@ export function useUpdateTrip() {
       id,
       ...updates
     }: Partial<Trip> & { id: string }) => {
+      if (isDemoMode()) {
+        const idx = DEMO_TRIPS.findIndex((t) => t.id === id)
+        if (idx === -1) throw new Error('Trip not found')
+        DEMO_TRIPS[idx] = { ...DEMO_TRIPS[idx], ...updates, updated_at: new Date().toISOString() }
+        return DEMO_TRIPS[idx]
+      }
+
       const { data, error } = await supabase
         .from('trips')
         .update(updates)
@@ -117,6 +162,12 @@ export function useDeleteTrip() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      if (isDemoMode()) {
+        const idx = DEMO_TRIPS.findIndex((t) => t.id === id)
+        if (idx !== -1) DEMO_TRIPS.splice(idx, 1)
+        return
+      }
+
       const { error } = await supabase.from('trips').delete().eq('id', id)
       if (error) throw error
     },
@@ -136,6 +187,17 @@ export function useCreateFlight() {
 
   return useMutation({
     mutationFn: async (flight: Omit<Flight, 'id' | 'user_id' | 'created_at'>) => {
+      if (isDemoMode()) {
+        const newFlight: Flight = {
+          ...flight,
+          id: `demo-flight-${Date.now()}`,
+          user_id: DEMO_USER_ID,
+          created_at: new Date().toISOString(),
+        }
+        DEMO_FLIGHTS.push(newFlight)
+        return newFlight
+      }
+
       const { data, error } = await supabase
         .from('flights')
         .insert({ ...flight, user_id: user!.id })
@@ -160,6 +222,17 @@ export function useCreateHotel() {
 
   return useMutation({
     mutationFn: async (hotel: Omit<Hotel, 'id' | 'user_id' | 'created_at'>) => {
+      if (isDemoMode()) {
+        const newHotel: Hotel = {
+          ...hotel,
+          id: `demo-hotel-${Date.now()}`,
+          user_id: DEMO_USER_ID,
+          created_at: new Date().toISOString(),
+        }
+        DEMO_HOTELS.push(newHotel)
+        return newHotel
+      }
+
       const { data, error } = await supabase
         .from('hotels')
         .insert({ ...hotel, user_id: user!.id })
@@ -184,6 +257,10 @@ export function useLoyaltyPrograms() {
   return useQuery({
     queryKey: ['loyalty-programs', user?.id],
     queryFn: async () => {
+      if (isDemoMode()) {
+        return [...DEMO_LOYALTY]
+      }
+
       const { data, error } = await supabase
         .from('loyalty_programs')
         .select('*')
@@ -202,6 +279,10 @@ export function useVisitedCountries() {
   return useQuery({
     queryKey: ['visited-countries', user?.id],
     queryFn: async () => {
+      if (isDemoMode()) {
+        return [...DEMO_VISITED_COUNTRIES]
+      }
+
       const { data, error } = await supabase
         .from('visited_countries')
         .select('*')

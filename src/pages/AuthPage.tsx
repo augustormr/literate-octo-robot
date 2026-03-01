@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 
 export default function AuthPage() {
-  const { user, loading } = useAuth()
+  const { user, loading, signInDemo } = useAuth()
   const navigate = useNavigate()
 
   if (loading) {
@@ -23,6 +23,11 @@ export default function AuthPage() {
 
   if (user) {
     return <Navigate to="/" replace />
+  }
+
+  const handleDemo = () => {
+    signInDemo()
+    navigate('/')
   }
 
   return (
@@ -48,6 +53,23 @@ export default function AuthPage() {
               <SignUpForm onSuccess={() => navigate('/')} />
             </TabsContent>
           </Tabs>
+
+          <div className="relative mt-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">Or</span>
+            </div>
+          </div>
+
+          <Button
+            variant="outline"
+            className="mt-4 w-full"
+            onClick={handleDemo}
+          >
+            Try Demo (no account needed)
+          </Button>
         </CardContent>
       </Card>
     </div>

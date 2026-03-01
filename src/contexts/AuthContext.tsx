@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { supabase } from '@/lib/supabase'
 import type { User, Session } from '@supabase/supabase-js'
 import type { Profile, UserRole } from '@/types'
+import { isDemoMode, enableDemoMode, disableDemoMode, DEMO_USER, DEMO_PROFILE } from '@/lib/demo'
 
 interface AuthContextType {
   user: User | null
@@ -10,8 +11,10 @@ interface AuthContextType {
   role: UserRole['role']
   isAdmin: boolean
   loading: boolean
+  isDemo: boolean
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
+  signInDemo: () => void
   signOut: () => Promise<void>
 }
 
@@ -23,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [role, setRole] = useState<UserRole['role']>('member')
   const [loading, setLoading] = useState(true)
+  const [isDemo, setIsDemo] = useState(false)
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
@@ -89,7 +93,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null }
   }
 
+  const signInDemo = () => {
+    enableDemoMode()
+    setIsDemo(true)
+    setUser(DEMO_USER as unknown as User)
+    setSession({} as Session)
+    setProfile(DEMO_PROFILE)
+    setRole('member')
+  }
+
   const signOut = async () => {
+    if (isDemoMode()) {
+      disableDemoMode()
+      setIsDemo(false)
+      setUser(null)
+      setSession(null)
+      setProfile(null)
+      setRole('member')
+      return
+    }
     await supabase.auth.signOut()
     setProfile(null)
     setRole('member')
@@ -104,8 +126,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role,
         isAdmin: role === 'admin',
         loading,
+        isDemo,
         signUp,
         signIn,
+        signInDemo,
         signOut,
       }}
     >
