@@ -78,19 +78,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-      },
-    })
-    return { error: error as Error | null }
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName },
+        },
+      })
+      return { error: error as Error | null }
+    } catch (e) {
+      return { error: new Error('Could not reach Supabase. The project may be paused — try restoring it from your Supabase dashboard, or use the Demo mode below.') }
+    }
   }
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error: error as Error | null }
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      return { error: error as Error | null }
+    } catch (e) {
+      return { error: new Error('Could not reach Supabase. The project may be paused — try restoring it from your Supabase dashboard, or use the Demo mode below.') }
+    }
   }
 
   const signInDemo = () => {
